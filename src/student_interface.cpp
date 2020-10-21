@@ -6,7 +6,7 @@
 #include <sstream>
 #include <experimental/filesystem>
 
-#define DISPLAY_SCALE 2
+#define DISPLAY_SCALE 2.0
 #define AL_EXT_CAL true
 
 #ifndef DEBUG
@@ -94,6 +94,7 @@ namespace student {
     static std::vector<cv::Point2f> points;
 
     if(input.is_open() && AL_EXT_CAL){
+      //TL TR BR BL you fucking animal
       while(!input.eof()){
         double x,y;
         input >> x >> y; //TODO: remember no nl at eof
@@ -119,9 +120,7 @@ namespace student {
   void imageUndistort(const cv::Mat& img_in, cv::Mat& img_out, 
           const cv::Mat& cam_matrix, const cv::Mat& dist_coeffs, const std::string& config_folder){
 
-    DBG_SHOW(img_in);
     cv::undistort(img_in, img_out, cam_matrix, dist_coeffs);
-    DBG_SHOW(img_out);
   }
 
   void findPlaneTransform(const cv::Mat& cam_matrix, const cv::Mat& rvec, 
@@ -136,7 +135,10 @@ namespace student {
 
   void unwarp(const cv::Mat& img_in, cv::Mat& img_out, const cv::Mat& transf, 
             const std::string& config_folder){
+    DBG_SHOW(img_in);
+    std::cout << "transform matrix: " << transf << std::endl;
     cv::warpPerspective(img_in, img_out, transf, img_in.size());  
+    DBG_SHOW(img_out);
   }
 
   bool processMap(const cv::Mat& img_in, const double scale, std::vector<Polygon>& obstacle_list, std::vector<std::pair<int,Polygon>>& victim_list, Polygon& gate, const std::string& config_folder){
