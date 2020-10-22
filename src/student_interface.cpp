@@ -1,10 +1,11 @@
 #include "student_image_elab_interface.hpp"
 #include "student_planning_interface.hpp"
 
-#include <ctime>
-#include <stdexcept>
-#include <sstream>
-#include <experimental/filesystem>
+#include<ctime>
+#include<stdexcept>
+#include<sstream>
+#include<experimental/filesystem>
+#include<glob.h>
 
 #define DISPLAY_SCALE 2.0
 #define AL_EXT_CAL true
@@ -22,7 +23,31 @@ namespace fs = std::experimental::filesystem;
 namespace student {
 
  void loadImage(cv::Mat& img_out, const std::string& config_folder){  
-   throw std::logic_error( "STUDENT FUNCTION - LOAD IMAGE - NOT IMPLEMENTED" );
+   static glob_t pglob; //this is not threadsafe
+   static int i;
+   static unsigned int i_mod;
+   static cv::Mat current;
+   static fs::path path;
+   if(!pglob.gl_pathc){
+     path = config_folder;
+     path /= "imgs";
+     path /= "*.jpg";
+     auto cp_data = path.u8string();
+     int err = glob(cp_data.data(), GLOB_ERR, 0, &pglob);
+     if(pglob.gl_pathc){
+       current = cv::imread(pglob.gl_pathv[i]);
+     }else{
+       std::cerr << "No jpg image in imgs" << std::endl;
+     }
+   }
+   if(pglob.gl_pathc){
+     if(i != ((i_mod / 50) % pglob.gl_pathc )){
+       i = (i_mod / 50) % pglob.gl_pathc;
+       current = cv::imread(pglob.gl_pathv[i]);
+     }
+     i_mod ++;
+   }
+   img_out = current;
  }
 
  void genericImageListener(const cv::Mat& img_in, std::string topic, const std::string& config_folder){
@@ -36,7 +61,7 @@ namespace student {
       //TODO: will break if res is > than 500 char
       strftime(d_path, sizeof(d_path), "%d%m%Y_%H%M%S", timeinfo);
       s_path = config_folder;
-      s_path /= "camera_image";
+      s_path /= "imgs";
       s_path /= d_path;
       if(!fs::create_directories(s_path.u8string())){
         std::cout << "Using directory that existed: " << s_path.u8string() << std::endl;
@@ -148,8 +173,6 @@ namespace student {
   }
 
   bool findRobot(const cv::Mat& img_in, const double scale, Polygon& triangle, double& x, double& y, double& theta, const std::string& config_folder){
-    cv::imshow("MAP", img_in);
-    cv::waitKey(0);
     throw std::logic_error( "STUDENT FUNCTION - FIND ROBOT - NOT IMPLEMENTED" );    
   }
 
