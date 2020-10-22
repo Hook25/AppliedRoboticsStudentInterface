@@ -20,6 +20,9 @@
 #define VICTIMS_TH_SIZE .3
 #define VICTIMS_TH_APPROX .01
 
+#define OBSTACLES_TH_APPROX .03
+#define OBSTACLES_TH_SIZE .01
+
 namespace fs = std::experimental::filesystem;
 
 namespace map_watcher {
@@ -31,6 +34,12 @@ namespace map_watcher {
     cv::Point loc;
     int rad;
     int id;
+  };
+  struct robot{
+    std::vector<cv::Point> cont;
+    cv::Point loc;
+    cv::Point tail_loc;
+    double angle;
   };
   int _getTemplateIndex(char *name){
     //name is ...img(num).jpg
@@ -178,6 +187,15 @@ namespace map_watcher {
       victims[i].rad = rad;
       victims[i].id = identifyVictim(img, victims[i].loc.x, victims[i].loc.y, victims[i].rad);
     }
+  }
+  cv::Point getCentre(std::vector<cv::Point> shape){
+    double x = 0;
+    double y = 0;
+    for(auto point : shape){
+      x+=point.x;
+      y+=point.y;
+    }
+    return cv::Point2f(x/shape.size(), y/shape.size());
   } 
   void findVictimsGate(cv::Mat &img, std::vector<cv::Point> &gate, std::vector<victim> &victims){
     std::vector<std::vector<cv::Point>> conts;
@@ -192,47 +210,50 @@ namespace map_watcher {
     getGate(act_cont, gate);
     getVictims(img, act_cont, victims);
   }
+  void findObstacles(const cv::Mat &img, std::vector<std::vector<cv::Point>> &conts){
+    std::vector<std::vector<cv::Point>> loc;
+    findCol(img, RED_LOW, RED_HIGH, loc);
+    approxConts(loc, OBSTACLES_TH_APPROX, conts);
+    filterBySize(conts, OBSTACLES_TH_SIZE);
+  }
+  void findRobot(const cv::Mat &img, robot &r){
+    std::vector<std::vector<cv::Point>> loc;
+    findCol(img, BLUE_LOW, BLUE_HIGH, loc);
+    filterBySize(loc, 1); //returns 1 given that 1 means only eq bigger
+    cv::minEnclosingTriangle(loc[0], r.cont);
+    r.loc = getCentre(r.cont);
+    double max_dist = 0;
+    for(auto point : r.cont){
+      double dist = pointDst(point, r.loc);
+      if(dist > max_dist){
+        max_dist = dist;
+        r.tail_loc = point;
+      }
+    }
+    r.angle = atan2(r.loc.y - r.tail_loc.y, r.loc.x - r.tail_loc.x);
+  }
 }
 int main(void){
   std::vector<cv::Point> gate;
   std::vector<map_watcher::victim> victims;
+  std::vector<std::vector<cv::Point>> obstacles;
   auto img = cv::imread("img.jpg");
   auto img1 = img.clone();
   cv::cvtColor(img, img, cv::COLOR_BGR2HSV);
   findVictimsGate(img, gate, victims);
   for(auto vic : victims){
     cv::circle(img1, vic.loc, vic.rad, cv::Scalar(0,0,0), 5);
-    cv::putText(img1, std::to_string(vic.id), vic.loc, cv::FONT_HERSHEY_DUPLEX, 1.0, CV_RGB(118, 185, 0), 2);
+    cv::putText(img1, std::to_string(vic.id), vic.loc, cv::FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 0), 2);
   }
-  std::vector<std::vector<cv::Point>> tmp;
-  tmp.emplace_back(gate);
-  cv::drawContours(img1, tmp, 0, (0,0,0), 5);
-  for(auto point : gate){
-    std::cout << point.x << " " << point.y << std::endl;
-  }
+  map_watcher::robot bot;
+  findRobot(img, bot);
+  cv::circle(img1, bot.loc, 3, (255,255,255), -1);
+  map_watcher::findObstacles(img, obstacles);
+  std::cout << "tot obstacles" << obstacles.size() << std::endl;
+  obstacles.push_back(gate);
+  obstacles.push_back(bot.cont);
+  cv::drawContours(img1, obstacles, -1, (0,0,0), 5);
+  cv::circle(img1, bot.tail_loc, 3, (255,255,255), -1);
   cv::imshow("ABC", img1);
   cv::waitKey(0);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
