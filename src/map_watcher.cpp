@@ -118,9 +118,9 @@ namespace map_watcher {
     cv::RotatedRect rr = cv::minAreaRect(conts[index]);
     cv::Mat x;
     cv::boxPoints(rr, x);
-    //TODO: this is beyond retarded
+    //TODO: this is beyond retarded and getting worse
     for(int point = 0; point < 4; point++){
-      gate.emplace_back((x.at<float>(point, 0), x.at<float>(point,1)));
+      gate.emplace_back(cv::Point2f(x.at<float>(point, 0), x.at<float>(point,1)));
     } 
     //remove the gate from green items
     conts.erase(conts.begin() + index);
@@ -188,7 +188,8 @@ namespace map_watcher {
     /*cv::drawContours(img, conts, -1, cv::Scalar(0,0,0), 3);
     cv::imshow("tmp", img);
     cv::waitKey(0);
-    */getGate(act_cont, gate);
+    */
+    getGate(act_cont, gate);
     getVictims(img, act_cont, victims);
   }
 }
@@ -202,6 +203,12 @@ int main(void){
   for(auto vic : victims){
     cv::circle(img1, vic.loc, vic.rad, cv::Scalar(0,0,0), 5);
     cv::putText(img1, std::to_string(vic.id), vic.loc, cv::FONT_HERSHEY_DUPLEX, 1.0, CV_RGB(118, 185, 0), 2);
+  }
+  std::vector<std::vector<cv::Point>> tmp;
+  tmp.emplace_back(gate);
+  cv::drawContours(img1, tmp, 0, (0,0,0), 5);
+  for(auto point : gate){
+    std::cout << point.x << " " << point.y << std::endl;
   }
   cv::imshow("ABC", img1);
   cv::waitKey(0);
