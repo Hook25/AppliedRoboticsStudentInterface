@@ -202,7 +202,6 @@ namespace student {
 
   bool findRobot(const cv::Mat& img_in, const double scale, 
    Polygon& triangle, double& x, double& y, double& theta, const std::string& config_folder){
-    //TODO: !!scale
     mw::robot bot;
     cv::Mat img_hsv;
     cv::cvtColor(img_in, img_hsv, cv::COLOR_BGR2HSV);

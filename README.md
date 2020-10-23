@@ -16,7 +16,7 @@ Once a preliminary work of filtering is done, as usual by size, the contour with
 The victims are slightly more complicated to detect because this operation requires two steps. The first is carried out as above, filtering by size and approximating to a circle. The additional problem is that the victims all have a tag on them, identifying them with an integer number. To detect the exact value of this tag the victim is isolated and sent to a template matching procedure that compares the input against a set of templates.
 
 ## Planning
-
+TODO
 ## Installation
 The project comes preconfigured with a `CMakeList.txt`, to have a sample of the computer vision there are three possible routes. 
 #### Python 3 script
