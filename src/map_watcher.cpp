@@ -1,6 +1,5 @@
-#include "student_image_elab_interface.hpp"
+#include "map_watcher.hpp"
 #include<stdlib.h> 
-#include<string.h>
 #include<experimental/filesystem>
 #include<iostream>  
 #include<glob.h>
@@ -28,21 +27,6 @@ namespace fs = std::experimental::filesystem;
 
 namespace map_watcher {
   static std::string _conf_dir_path;
-  struct n_template{
-    int id;
-    cv::Mat img;
-  };
-  struct victim {
-    cv::Point loc;
-    int rad;
-    int id;
-  };
-  struct robot{
-    std::vector<cv::Point> cont;
-    cv::Point loc;
-    cv::Point tail_loc;
-    double angle;
-  };
   void init(const std::string &conf_dir_path){
     _conf_dir_path = conf_dir_path;
   }
@@ -237,6 +221,7 @@ namespace map_watcher {
     r.angle = atan2(r.loc.y - r.tail_loc.y, r.loc.x - r.tail_loc.x);
   }
 }
+#ifdef EXAMPLE_USAGE
 int main(void){
   map_watcher::init("/tmp");
   std::vector<cv::Point> gate;
@@ -262,3 +247,4 @@ int main(void){
   cv::imshow("ABC", img1);
   cv::waitKey(0);
 }
+#endif
