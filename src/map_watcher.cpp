@@ -46,7 +46,7 @@ namespace map_watcher {
     char *token = strtok(name, "g");
     char *next = token;
     while(next != NULL){
-      next = strtok(0, "g");
+      next = strtok(0, "g"); //goto the last g in path
       if(next){
         token = next;
       }
@@ -73,11 +73,11 @@ namespace map_watcher {
       }
       globfree(&pglob);
     }else{
-      std::cout << ("Unable to find imgs, err: ") << err << std::endl;
-      //TODO: from here on is 100% SIGV
+      throw std::runtime_error("No file .jpg in dir");
     } 
   }
-  void findCol(cv::Mat img_hsv, cv::Scalar lower, cv::Scalar upper, std::vector<std::vector<cv::Point>> &conts){
+  void findCol(const cv::Mat &img_hsv, cv::Scalar lower, cv::Scalar upper, 
+   std::vector<std::vector<cv::Point>> &conts){
     cv::Mat mask;
     cv::inRange(img_hsv, lower, upper, mask);
     auto kernel = cv::getStructuringElement(cv::MORPH_RECT, KERNEL_COL_DCT_SIZE);
@@ -129,6 +129,7 @@ namespace map_watcher {
     cv::boxPoints(rr, x);
     //TODO: this is beyond retarded and getting worse
     for(int point = 0; point < 4; point++){
+      //boxPoint ret is a Mat for some reason with (x, y) pairs as rows
       gate.emplace_back(cv::Point2f(x.at<float>(point, 0), x.at<float>(point,1)));
     } 
     //remove the gate from green items
@@ -188,7 +189,7 @@ namespace map_watcher {
       victims[i].id = identifyVictim(img, victims[i].loc.x, victims[i].loc.y, victims[i].rad);
     }
   }
-  cv::Point getCentre(std::vector<cv::Point> shape){
+  cv::Point getCentre(const std::vector<cv::Point> &shape){
     double x = 0;
     double y = 0;
     for(auto point : shape){
@@ -197,7 +198,7 @@ namespace map_watcher {
     }
     return cv::Point2f(x/shape.size(), y/shape.size());
   } 
-  void findVictimsGate(cv::Mat &img, std::vector<cv::Point> &gate, std::vector<victim> &victims){
+  void findVictimsGate(const cv::Mat &img, std::vector<cv::Point> &gate, std::vector<victim> &victims){
     std::vector<std::vector<cv::Point>> conts;
     findCol(img, GREEN_LOW, GREEN_HIGH, conts);
     filterBySize(conts, VICTIMS_TH_SIZE);
