@@ -11,6 +11,7 @@ namespace map_watcher {
   };
   struct victim {
     cv::Point loc;
+    std::vector<cv::Point> shape;
     int rad;
     int id;
   };

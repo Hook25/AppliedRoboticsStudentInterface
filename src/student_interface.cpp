@@ -1,6 +1,8 @@
 #include "student_image_elab_interface.hpp"
 #include "student_planning_interface.hpp"
 
+#include "map_watcher.hpp"
+
 #include<ctime>
 #include<stdexcept>
 #include<sstream>
@@ -19,6 +21,7 @@
 #endif
 
 namespace fs = std::experimental::filesystem;
+namespace mw = map_watcher;
 
 namespace student {
 
@@ -160,20 +163,55 @@ namespace student {
 
   void unwarp(const cv::Mat& img_in, cv::Mat& img_out, const cv::Mat& transf, 
             const std::string& config_folder){
-    DBG_SHOW(img_in);
-    std::cout << "transform matrix: " << transf << std::endl;
     cv::warpPerspective(img_in, img_out, transf, img_in.size());  
-    DBG_SHOW(img_out);
+  }  
+
+  void _fromApiType(const std::vector<cv::Point> &in, std::vector<Point> &out, const double scale){
+    out.resize(in.size());
+    for(auto p : in){
+      out.push_back(Point(((double)p.x)/scale, ((double)p.y)/scale));
+    } 
+  }  
+
+  bool processMap(const cv::Mat& img_in, 
+   const double scale, std::vector<Polygon>& obstacle_list, 
+   std::vector<std::pair<int,Polygon>>& victim_list, Polygon& gate, const std::string& config_folder){
+    //bad af, consider refactoring this mess, maybe custom converters?
+    //TODO: !!scale
+    mw::init(config_folder);
+    cv::Mat img_hsv;
+    cv::cvtColor(img_in, img_hsv, cv::COLOR_BGR2HSV);
+    std::vector<mw::victim> api_victims;
+    std::vector<cv::Point> api_gate;
+    mw::findVictimsGate(img_hsv, api_gate, api_victims);
+    _fromApiType(api_gate, gate, scale);
+    victim_list.resize(api_victims.size());
+    for(int i = 0; i < api_victims.size(); i++){
+      victim_list[i].first = api_victims[i].id;
+      //TODO: ofc shape lol
+      _fromApiType(api_victims[i].shape, victim_list[i].second, scale);
+    }
+    std::vector<std::vector<cv::Point>> api_obstacles;
+    mw::findObstacles(img_hsv, api_obstacles);
+    obstacle_list.resize(api_obstacles.size());
+    for(int i = 0; i < api_obstacles.size(); i++){
+      _fromApiType(api_obstacles[i], obstacle_list[i], scale);
+    }
+    return true;
   }
 
-  bool processMap(const cv::Mat& img_in, const double scale, std::vector<Polygon>& obstacle_list, std::vector<std::pair<int,Polygon>>& victim_list, Polygon& gate, const std::string& config_folder){
-    cv::imshow("MAP", img_in);
-    cv::waitKey(0);
-    throw std::logic_error( "STUDENT FUNCTION - PROCESS MAP - NOT IMPLEMENTED" );   
-  }
-
-  bool findRobot(const cv::Mat& img_in, const double scale, Polygon& triangle, double& x, double& y, double& theta, const std::string& config_folder){
-    throw std::logic_error( "STUDENT FUNCTION - FIND ROBOT - NOT IMPLEMENTED" );    
+  bool findRobot(const cv::Mat& img_in, const double scale, 
+   Polygon& triangle, double& x, double& y, double& theta, const std::string& config_folder){
+    //TODO: !!scale
+    mw::robot bot;
+    cv::Mat img_hsv;
+    cv::cvtColor(img_in, img_hsv, cv::COLOR_BGR2HSV);
+    findRobot(img_hsv, bot);
+    _fromApiType(bot.cont, triangle, scale);
+    x = bot.loc.x/scale;
+    y = bot.loc.y/scale;
+    theta = bot.angle;    
+    return true;
   }
 
   bool planPath(const Polygon& borders, const std::vector<Polygon>& obstacle_list, const std::vector<std::pair<int,Polygon>>& victim_list, const Polygon& gate, const float x, const float y, const float theta, Path& path){

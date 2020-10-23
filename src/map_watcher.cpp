@@ -8,6 +8,8 @@
 
 #define KERNEL_COL_DCT_SIZE cv::Size(3,3)
 
+//TODO: recalibrate on rl image
+
 #define GREEN_LOW cv::Scalar(54, 127, 0)
 #define GREEN_HIGH cv::Scalar(98, 255, 255)
 
@@ -173,6 +175,7 @@ namespace map_watcher {
       cv::Point2f rt_val;//no reason in the whole world this has to be Point2f
       float rad;         //float ofc, as above
       minEnclosingCircle(conts[i], rt_val, rad);
+      victims[i].shape = conts[i];
       victims[i].loc = rt_val;
       victims[i].rad = rad;
       victims[i].id = identifyVictim(img, victims[i].loc.x, victims[i].loc.y, victims[i].rad);

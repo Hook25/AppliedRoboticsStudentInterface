@@ -30,7 +30,7 @@ target_compile_definitions(see PRIVATE EXAMPLE_USAGE=1)
 ## CREATE EXECUTABLE LIBRARY
 add_library(student SHARED
    src/student_interface.cpp
-   src/map_watcher.hpp
+   src/map_watcher.cpp
 )
 
 target_link_libraries(student
