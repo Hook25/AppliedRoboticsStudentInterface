@@ -19,7 +19,13 @@ add_executable(calibrate
 target_link_libraries(calibrate
   ${OpenCV_LIBRARIES}  
 )
-
+add_executable(see
+  src/map_watcher.cpp
+)
+target_link_libraries(see
+  ${OpenCV_LIBRARIES}  
+  stdc++fs
+)
 ## CREATE EXECUTABLE LIBRARY
 add_library(student SHARED
    src/student_interface.cpp

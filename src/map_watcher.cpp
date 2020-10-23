@@ -6,6 +6,7 @@
 #include<glob.h>
 
 #define TEMPLATES_PATH "templates"
+
 #define KERNEL_COL_DCT_SIZE cv::Size(3,3)
 
 #define GREEN_LOW cv::Scalar(54, 127, 0)
@@ -26,6 +27,7 @@
 namespace fs = std::experimental::filesystem;
 
 namespace map_watcher {
+  static std::string _conf_dir_path;
   struct n_template{
     int id;
     cv::Mat img;
@@ -41,6 +43,9 @@ namespace map_watcher {
     cv::Point tail_loc;
     double angle;
   };
+  void init(const std::string &conf_dir_path){
+    _conf_dir_path = conf_dir_path;
+  }
   int _getTemplateIndex(char *name){
     //name is ...img(num).jpg
     char *token = strtok(name, "g");
@@ -56,14 +61,14 @@ namespace map_watcher {
     assert(next);
     return atoi(token);
   }
-  void loadNumTemplates(std::vector<n_template> *storage, const std::string &config_folder){
-    /*fs::path path; 
-    path = (config_folder);
+  void loadNumTemplates(std::vector<n_template> *storage){
+    fs::path path; 
+    path = _conf_dir_path;
     path /= TEMPLATES_PATH;
     path /= "*.jpg";
-    auto data_p = path.u8string();*/ //TODO:this is dogshit, fix
+    auto data_p = path.u8string();
     glob_t pglob;
-    int err = glob("/tmp/templates/*.jpg", GLOB_ERR, 0, &pglob);
+    int err = glob(data_p.data(), GLOB_ERR, 0, &pglob);
     if(!err && pglob.gl_pathc){
       for(int i = 0; i<pglob.gl_pathc; i++){
         char *str = pglob.gl_pathv[i];
@@ -73,7 +78,7 @@ namespace map_watcher {
       }
       globfree(&pglob);
     }else{
-      throw std::runtime_error("No file .jpg in dir");
+      throw std::runtime_error(std::string("No file matches ") + path.u8string());
     } 
   }
   void findCol(const cv::Mat &img_hsv, cv::Scalar lower, cv::Scalar upper, 
@@ -138,7 +143,7 @@ namespace map_watcher {
   int templateMatching(const cv::Mat &img){
     static std::vector<n_template> storage;
     if(storage.size() == 0){
-     loadNumTemplates(&storage, std::string(""));
+     loadNumTemplates(&storage);
      for(auto s : storage){
        std::cout << s.id << std::endl; 
      }
@@ -164,10 +169,10 @@ namespace map_watcher {
         }
       }
     }
-    std::cout << storage[best_cmp_i].id << " is better" << std::endl;
     return storage[best_cmp_i].id;
   }
   int identifyVictim(const cv::Mat &img, double x, double y, double rad){
+    //TODO: this could be way faster by first cutting then masking, consider changing
     cv::Mat mask = cv::Mat::zeros(img.size(), CV_8U);
     cv::circle(mask, cv::Point(x,y), rad, cv::Scalar(255,255,255), CV_FILLED, 8, 0);
     cv::Mat masked;
@@ -202,19 +207,17 @@ namespace map_watcher {
     std::vector<std::vector<cv::Point>> conts;
     findCol(img, GREEN_LOW, GREEN_HIGH, conts);
     filterBySize(conts, VICTIMS_TH_SIZE);
-    std::vector<std::vector<cv::Point>> act_cont;
-    approxConts(conts, VICTIMS_TH_APPROX, act_cont);
+    approxConts(conts, VICTIMS_TH_APPROX, conts);
     /*cv::drawContours(img, conts, -1, cv::Scalar(0,0,0), 3);
     cv::imshow("tmp", img);
     cv::waitKey(0);
     */
-    getGate(act_cont, gate);
-    getVictims(img, act_cont, victims);
+    getGate(conts, gate);
+    getVictims(img, conts, victims);
   }
   void findObstacles(const cv::Mat &img, std::vector<std::vector<cv::Point>> &conts){
-    std::vector<std::vector<cv::Point>> loc;
-    findCol(img, RED_LOW, RED_HIGH, loc);
-    approxConts(loc, OBSTACLES_TH_APPROX, conts);
+    findCol(img, RED_LOW, RED_HIGH, conts);
+    approxConts(conts, OBSTACLES_TH_APPROX, conts);
     filterBySize(conts, OBSTACLES_TH_SIZE);
   }
   void findRobot(const cv::Mat &img, robot &r){
@@ -235,6 +238,7 @@ namespace map_watcher {
   }
 }
 int main(void){
+  map_watcher::init("/tmp");
   std::vector<cv::Point> gate;
   std::vector<map_watcher::victim> victims;
   std::vector<std::vector<cv::Point>> obstacles;
