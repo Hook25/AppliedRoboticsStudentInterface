@@ -21,13 +21,16 @@ def draw_node(n):
     c = "red"
   elif n.kind == n.VICTIM:
     c = "green"
+  elif n.kind == n.TARGET:
+    c = "blue"
+  elif n.kind == n.FREE:
+    return
   plt.plot([n.x, n.x, n.Mx, n.Mx, n.x], [n.y, n.My, n.My, n.y, n.y], c=c)
 
 def draw_graph(g):
   for row in g.rows:
     for node in row:
       draw_node(node)
-  draw_connectins(g)
   plt.show()
 
 def draw_connectins(g):
@@ -37,6 +40,10 @@ def draw_connectins(g):
         c_node = center_of([node.x, node.Mx], [node.y, node.My])
         c_nei = center_of([nei.x, nei.Mx], [nei.y, nei.My])
         plt.plot([c_node[0], c_nei[0]], [c_node[1], c_nei[1]])
+
+def draw_path(p):
+  centers = [(center_of([n.x, n.Mx], [n.y, n.My])) for n in p]
+  plt.plot([n[0] for n in centers], [n[1] for n in centers], c="blue")
 
 def main():
   from data import Grid

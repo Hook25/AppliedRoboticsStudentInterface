@@ -7,7 +7,7 @@ class Grid:
     self.ys = []
     self.areas = []
   def from_poly(self, areas):
-    self.areas = areas
+    self.areas = sorted(areas, key=lambda a:a.to_box()[0])
     for area in areas:
       mx, Mx, my, My = area.to_box()
       self.xs += [mx, Mx]
@@ -16,8 +16,10 @@ class Grid:
     self.ys = list(set(self.ys))
   
   def categorize(self, node):
-    inter = [a for a in self.areas if node.box_intersects(a)]
-    return inter[0].kind if len(inter) > 0 else Node.FREE
+    for a in self.areas:
+      if node.box_intersects(a):
+        return a.kind
+    return Node.FREE
   
   def to_graph(self):
     g = Graph()
@@ -52,14 +54,21 @@ class Area:
   def __init__(self, poly, kind):
     self.poly = poly
     self.kind = kind
-  def to_box(self):
     mx, Mx = min(p[X] for p in self.poly), max(p[X] for p in self.poly)
     my, My = min(p[Y] for p in self.poly), max(p[Y] for p in self.poly)
-    return mx, Mx, my, My
+    self.mx = mx
+    self.Mx = Mx
+    self.my = my
+    self.My = My
+  
+  def to_box(self):
+    return self.mx, self.Mx, self.my, self.My
+
   def corner_inside(self, other):
     o_mx, o_Mx, o_my, o_My = other.to_box()
     mx, Mx, my, My = self.to_box()
     return (mx >= o_mx and mx <= o_Mx and my >= o_my and my <= o_My)
+
   def box_intersects(self, other):
     return (
       self.corner_inside(other) or
@@ -75,6 +84,7 @@ class Node(Area):
   OBSTACLE = 1
   VICTIM = 2
   UNCAT = 3
+  TARGET = 4
   def __init__(self, x, Mx, y, My):
     x, Mx = min(x, Mx), max(x, Mx)
     y, My = min(y, My), max(y, My)
