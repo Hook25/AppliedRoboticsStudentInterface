@@ -7,10 +7,8 @@ class ExplorerPQ:
   def __init__(self, cost_function):
     self.cost_function = cost_function
     self._inner = []
-    self._selector = 0
   def push(self, item):
-    heapq.heappush(self._inner, (self.cost_function(item), self._selector, item))
-    self._selector += 1
+    heapq.heappush(self._inner, (self.cost_function(item), item))
   def pop(self):
     return heapq.heappop(self._inner)[-1]
   def empty(self):
@@ -47,12 +45,13 @@ class Path:
     return self.nodes[i]
   def __iter__(self):
     return iter(self.nodes)
+  def __lt__(self, other):
+    return self.cost < other.cost
 
 def clean(g):
   for row in g.rows:
     for n in row:
       n.cost = 2e9
-      n.visited = False
 
 def find_path(start, target, cost_function):
   start_path = Path()
@@ -65,14 +64,13 @@ def find_path(start, target, cost_function):
     for nei in p_now[-1].nei:
       new_path = p_now.new_append(nei)
       if nei.kind == nei.TARGET:
+        nei.cost = new_path.cost
         res = new_path
       elif new_path.cost < nei.cost and (
        res == None or res.cost > new_path.cost
       ):
         nei.cost = new_path.cost
         epq.push(new_path)
-      if new_path.cost < -12500:
-        breakpoint()
       """else:
         if new_path.cost >= nei.cost:
           print("discarded:", new_path.cost, "worse than: ", nei.cost)
@@ -82,7 +80,7 @@ def find_path(start, target, cost_function):
 
 def main():
   from data import Area, Node, Grid
-  from utils import draw_graph, draw_path
+  from utils import draw_graph, draw_path, draw_graph_3d
   xs = list(range(50))
   ys = list(range(50))
   areas = [Area([(x, y), (x+1,y+1)], Node.VICTIM) for (x,y) in zip(xs, ys)]
@@ -103,6 +101,7 @@ def main():
   print((time() - t), "s")
   draw_path(path)
   draw_graph(graph)
+  draw_graph_3d(graph)
 
 if __name__ == "__main__":
   main()

@@ -45,6 +45,19 @@ def draw_path(p):
   centers = [(center_of([n.x, n.Mx], [n.y, n.My])) for n in p]
   plt.plot([n[0] for n in centers], [n[1] for n in centers], c="blue")
 
+def draw_graph_3d(g):
+  X = list(range(50))
+  Y = list(range(50))
+  Z = [[node.cost if node.cost < 100 else 0 for node in row] for row in  g.rows]
+  fig = plt.figure()
+  ax = plt.axes(projection='3d')
+  ax.contour3D(X, Y, Z, 50, cmap='binary')
+  ax.set_xlabel('x')
+  ax.set_ylabel('y')
+  ax.set_zlabel('value');
+  fig.show()
+  plt.show()
+
 def main():
   from data import Grid
   g = Grid()
