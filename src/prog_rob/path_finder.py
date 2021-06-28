@@ -81,13 +81,17 @@ def find_path(start, target, cost_function):
 def main():
   from data import Area, Node, Grid
   from utils import draw_graph, draw_path, draw_graph_3d
-  xs = list(range(50))
-  ys = list(range(50))
+  xs = list(range(150))
+  ys = list(range(150))
   areas = [Area([(x, y), (x+1,y+1)], Node.VICTIM) for (x,y) in zip(xs, ys)]
   g = Grid()
   g.from_poly(areas)
   graph = g.to_graph()
   target = graph.rows[-1][-1]
+  graph.rows[1][1].kind = target.OBSTACLE
+  graph.rows[2][1].kind = target.OBSTACLE
+  graph.rows[1][2].kind = target.OBSTACLE
+  graph.rows[2][2].kind = target.OBSTACLE
   target.kind = target.TARGET
 
   def cf(path):

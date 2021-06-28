@@ -46,9 +46,9 @@ def draw_path(p):
   plt.plot([n[0] for n in centers], [n[1] for n in centers], c="blue")
 
 def draw_graph_3d(g):
-  X = list(range(50))
-  Y = list(range(50))
   Z = [[node.cost if node.cost < 100 else 0 for node in row] for row in  g.rows]
+  X = list(range(len(Z)))
+  Y = list(range(len(Z)))
   fig = plt.figure()
   ax = plt.axes(projection='3d')
   ax.contour3D(X, Y, Z, 50, cmap='binary')

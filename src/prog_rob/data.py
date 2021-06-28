@@ -40,13 +40,19 @@ class Grid:
       for n_i, node in enumerate(row):
         #g.rows[r_i][n_i]
         node.kind = self.categorize(node)
-        if r_i > 0:
-          node.nei.append(g.rows[r_i-1][n_i])
-        if n_i > 0:
-          node.nei.append(g.rows[r_i][n_i-1])
-        if r_i < r_c - 1:
+
+    def is_obst(r, n):
+      return g.rows[r][n].kind == Node.OBSTACLE
+
+    for r_i, row in enumerate(g.rows):
+      for n_i, node in enumerate(row):
+        if r_i > 0 and not is_obst(r_i-1, n_i):
+          node.nei.append(g.rows[r_i - 1][n_i])
+        if n_i > 0 and not is_obst(r_i, n_i-1):
+          node.nei.append(g.rows[r_i][n_i - 1])
+        if r_i < r_c - 1 and not is_obst(r_i + 1, n_i):
           node.nei.append(g.rows[r_i + 1][n_i])
-        if n_i < n_c -1:
+        if n_i < n_c -1 and not is_obst(r_i, n_i + 1):
           node.nei.append(g.rows[r_i][n_i + 1])
     return g
 
