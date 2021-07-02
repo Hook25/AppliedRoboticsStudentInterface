@@ -1,14 +1,14 @@
 import heapq
-from copy import copy, deepcopy
+from copy import copy
 
-PRIZE = 2
+PRIZE = 5
 
 class ExplorerPQ:
   def __init__(self, cost_function):
     self.cost_function = cost_function
     self._inner = []
   def push(self, item):
-    heapq.heappush(self._inner, (self.cost_function(item), item))
+    heapq.heappush(self._inner, (*self.cost_function(item), item))
   def pop(self):
     return heapq.heappop(self._inner)[-1]
   def empty(self):
@@ -18,18 +18,17 @@ class Path:
   def __init__(self):
     self.cost = 0
     self.nodes = []
-    self.visit_dict = {}
+    self.visited_prize = {}
   def new_append(self, node):
     p = Path()
     p.cost = self.cost
     p.nodes = copy(self.nodes)
-    p.visit_dict = copy(self.visit_dict)
+    p.visited_prize = copy(self.visited_prize)
     p.append(node)
     return p
   def append(self, node):
     self.nodes.append(node)
     self.cost += self.last_step_cost()
-    self.visit_dict[node] = True
   def last_step_cost(self):
     if len(self.nodes) == 1:
       return 0
@@ -38,7 +37,8 @@ class Path:
       abs(self.nodes[-1].y - self.nodes[-2].y)
     )
     if (self.nodes[-1].kind == self.nodes[-1].VICTIM and
-      self.nodes[-1] not in self.visit_dict):
+      self.nodes[-1].uvic_id not in self.visited_prize):
+      self.visited_prize[self.nodes[-1].uvic_id] = True
       base -= PRIZE
     return base
   def __getitem__(self, i):
@@ -46,12 +46,13 @@ class Path:
   def __iter__(self):
     return iter(self.nodes)
   def __lt__(self, other):
-    return self.cost < other.cost
+    return id(self) < id(other)
 
 def clean(g):
   for row in g.rows:
     for n in row:
       n.cost = 2e9
+      n.visited = False
 
 def find_path(start, target, cost_function):
   start_path = Path()
@@ -64,11 +65,9 @@ def find_path(start, target, cost_function):
     for nei in p_now[-1].nei:
       new_path = p_now.new_append(nei)
       if nei.kind == nei.TARGET:
-        nei.cost = new_path.cost
         res = new_path
       elif new_path.cost < nei.cost and (
-       res == None or res.cost > new_path.cost
-      ):
+       res == None or res.cost > new_path.cost):
         nei.cost = new_path.cost
         epq.push(new_path)
       """else:
@@ -78,26 +77,41 @@ def find_path(start, target, cost_function):
           print("discarded:", new_path.cost, "worse than: ", res.cost)"""
   return res
 
+def init_dist(g, target):
+  to_visit = [target]
+  while to_visit:
+    now = to_visit.pop()
+    if not now.visited:
+      now.dst_target = (abs(now.x - target.x) + abs(now.y - target.y))
+      now.visited = True
+      for nei in now.nei:
+        to_visit.append(nei)
+
+def cf_dst(path):
+  return path[-1].dst_target
+
+def cf_cost(path):
+  return path.cost
+
+def cf(path):
+  dst, cost = cf_dst(path), cf_cost(path)
+  return (dst + cost, cost)
+
 def main():
   from data import Area, Node, Grid
-  from utils import draw_graph, draw_path, draw_graph_3d
-  xs = list(range(150))
-  ys = list(range(150))
+  from utils import draw_graph, draw_path
+  xs = list(range(90))
+  ys = list(range(90))
   areas = [Area([(x, y), (x+1,y+1)], Node.VICTIM) for (x,y) in zip(xs, ys)]
   g = Grid()
   g.from_poly(areas)
   graph = g.to_graph()
   target = graph.rows[-1][-1]
-  graph.rows[1][1].kind = target.OBSTACLE
-  graph.rows[2][1].kind = target.OBSTACLE
-  graph.rows[1][2].kind = target.OBSTACLE
-  graph.rows[2][2].kind = target.OBSTACLE
   target.kind = target.TARGET
 
-  def cf(path):
-    return (abs(target.x - path[-1].x) + abs(target.y - path[-1].y))
-
   clean(graph)
+  init_dist(graph, target)
+
   from time import time
   print("started")
   t = time()
@@ -105,7 +119,6 @@ def main():
   print((time() - t), "s")
   draw_path(path)
   draw_graph(graph)
-  draw_graph_3d(graph)
 
 if __name__ == "__main__":
   main()

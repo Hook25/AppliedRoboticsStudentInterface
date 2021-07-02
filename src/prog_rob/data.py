@@ -18,6 +18,8 @@ class Grid:
   def categorize(self, node):
     for a in self.areas:
       if node.box_intersects(a):
+        if a.kind == Node.VICTIM:
+          node.uvic_id = a.uvic_id
         return a.kind
     return Node.FREE
   
@@ -57,7 +59,7 @@ class Grid:
     return g
 
 class Area:
-  def __init__(self, poly, kind):
+  def __init__(self, poly, kind, uvic_id = None):
     self.poly = poly
     self.kind = kind
     mx, Mx = min(p[X] for p in self.poly), max(p[X] for p in self.poly)
@@ -68,6 +70,8 @@ class Area:
     self.my = my
     self.y = my
     self.My = My
+    if uvic_id != None:
+      self.uvic_id = uvic_id
   
   def to_box(self):
     return self.mx, self.Mx, self.my, self.My
@@ -75,7 +79,7 @@ class Area:
   def corner_inside(self, other):
     o_mx, o_Mx, o_my, o_My = other.to_box()
     mx, Mx, my, My = self.to_box()
-    return (mx >= o_mx and mx <= o_Mx and my >= o_my and my <= o_My)
+    return (mx >= o_mx and mx < o_Mx and my >= o_my and my < o_My)
 
   def box_intersects(self, other):
     return (
@@ -93,6 +97,7 @@ class Node(Area):
   VICTIM = 2
   UNCAT = 3
   TARGET = 4
+  START = 5
   def __init__(self, x, Mx, y, My):
     x, Mx = min(x, Mx), max(x, Mx)
     y, My = min(y, My), max(y, My)
