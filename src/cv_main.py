@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from math import sqrt, atan2
+from prog_rob import path_finder
 
 GREEN_LOW = np.array([54,127,0], dtype="uint8")
 GREEN_HIGH = np.array([98, 255, 255], dtype="uint8")
@@ -11,7 +12,7 @@ RED_HIGH = np.array([43,255,255], dtype="uint8")
 BLUE_LOW = np.array([99, 180, 0], dtype="uint8")
 BLUE_HIGH = np.array([123, 240, 255], dtype="uint8")
 
-template_name =  ["1.png", "3.png", "4.png", "5.png"]
+template_name =  ["1.jpg", "3.jpg", "4.jpg", "5.jpg"]
 templates = [cv2.imread(path) for path in template_name]
 
 #img in BGR2HSV
@@ -111,50 +112,81 @@ def template_matching(img, templates):
       img = img2.copy()
   return best_cmp_i
         
+def cont_p_to_sensible(cont):
+  return [p[0] for p in cont] # p = [[x,y]] -> [x,y]
+
+def circle_to_box(c):
+  cx, cy, r, i = c
+  x, y, Mx, My = cx - r, cy - r, cx + r, cy + r
+  return [(x,y), (Mx, My)], i
+
+MARGIN = .1
+def enlarge_obst(obst):
+  scale = MARGIN / 2
+  dec = 1 - scale
+  inc = 1 + scale
+  obst.x *= dec
+  obst.y *= dec
+  obst.Mx *= inc
+  obst.My *= inc
+  return obst
+
+def enlarge_obsts(obsts):
+  return [enlarge_obst(o) for o in obsts]
+
+def do_path_finding(rob, victs, obsts, gate):
+  from prog_rob import data
+  from prog_rob.utils import draw_graph, draw_node, draw_path
+  from prog_rob import path_finder
+  rob = cont_p_to_sensible(rob)
+  obsts = [cont_p_to_sensible(obst) for obst in obsts]
+  victs = [circle_to_box(c) for c in victs]
+  
+  area_obst = [data.Area(obst, data.Node.OBSTACLE) for obst in obsts]
+  area_obst = enlarge_obsts(area_obst)
+
+  areas = [data.Area(vict[0], data.Node.VICTIM, vict[1]) for vict in victs]
+  areas += area_obst
+  areas += [data.Area(rob, data.Node.START)]
+  target = data.Area(gate, data.Node.TARGET)
+  areas += [target]
+  g = data.Grid()
+  g.from_poly(areas)
+  graph = g.to_graph()
+  start = None
+  for row in graph.rows:
+    for node in row:
+      if node.kind == node.TARGET:
+        target = node
+  for row in graph.rows:
+    for node in row:
+      if node.kind == node.START:
+        start = node
+  path_finder.clean(graph)
+  path_finder.init_dist(graph, target)
+  path = path_finder.find_path(start, target, path_finder.cf)
+  draw_path(path)
+  draw_graph(graph)
+
 def main():
   img = cv2.imread("in.jpg")
   orig = img.copy()
   img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
   cont, bari_p, top_p, angle = find_robot(img, (BLUE_LOW, BLUE_HIGH))
+  victs, gate = find_victims_gate(img, (GREEN_LOW, GREEN_HIGH))
+  obst = find_obstacles(img, (RED_LOW, RED_HIGH))
+  do_path_finding(cont, victs, obst, gate)
+  
   cv2.drawContours(orig, [cont], 0, (0,0,0), 2)
   cv2.circle(orig, bari_p, 5,(0,0,255), -1)
   cv2.circle(orig, top_p, 5,(0,255,0), -1)
-  victs, gate = find_victims_gate(img, (GREEN_LOW, GREEN_HIGH))
   cv2.drawContours(orig, [gate], 0, (0,0,0), 2)
   for (x, y, _, txt) in victs:
     cv2.putText(orig, template_name[txt],(int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 2)
-  obst = find_obstacles(img, (RED_LOW, RED_HIGH))
   print(len(obst))
   cv2.drawContours(orig, obst, -1, (255,0,0), 3)
   cv2.imshow("Done", orig)
   cv2.waitKey()
-
-def tmp():
-  #does not workl fuck
-  def get_hist(img):
-    h_bins = 200
-    histSize = [h_bins]
-    h_ranges = [59, 179]
-    ranges = h_ranges
-    channels = [0]
-    hist_base = cv2.calcHist([img], channels, None, histSize, ranges, accumulate=False)
-    return cv2.normalize(hist_base, hist_base, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX) 
-  img1 = cv2.imread("1_rota.png")
-  img2 = cv2.imread("4.png")
-  img3 = cv2.imread("1.png")
-  hsv_base = cv2.cvtColor(img1, cv2.COLOR_BGR2HSV)
-  hsv_test1 = cv2.cvtColor(img2, cv2.COLOR_BGR2HSV)
-  hsv_test2 = cv2.cvtColor(img3, cv2.COLOR_BGR2HSV)
-  hist_base = get_hist(img1)
-  hist_test1 = get_hist(img2)
-  hist_test2 = get_hist(img3)
- 
-  for compare_method in range(4):
-    base_base = cv2.compareHist(hist_base, hist_base, compare_method)
-    base_test1 = cv2.compareHist(hist_base, hist_test1, compare_method) 
-    base_test2 = cv2.compareHist(hist_base, hist_test2, compare_method)
-    print('Method:', compare_method, 'Perfect, Base-Half, Base-Test(1), Base-Test(2) :',\
-      base_base, '/', base_test1, '/', base_test2)
           
 if __name__ == "__main__":
   main()
