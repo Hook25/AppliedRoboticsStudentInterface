@@ -12,8 +12,8 @@ class Grid:
       mx, Mx, my, My = area.to_box()
       self.xs += [mx, Mx]
       self.ys += [my, My]
-    self.xs = list(set(self.xs))
-    self.ys = list(set(self.ys))
+    self.xs = sorted(list(set(self.xs)))
+    self.ys = sorted(list(set(self.ys)))
   
   def categorize(self, node):
     for a in self.areas:
@@ -63,8 +63,10 @@ class Area:
     mx, Mx = min(p[X] for p in self.poly), max(p[X] for p in self.poly)
     my, My = min(p[Y] for p in self.poly), max(p[Y] for p in self.poly)
     self.mx = mx
+    self.x = mx
     self.Mx = Mx
     self.my = my
+    self.y = my
     self.My = My
   
   def to_box(self):
