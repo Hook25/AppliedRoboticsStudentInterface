@@ -2,14 +2,17 @@ import matplotlib.pyplot as plt
 
 def bezier_curve(control_points, number_of_curve_points):
   last_point = number_of_curve_points - 1
-  return [ bezier_point(control_points, i / last_point )
+  points = [ bezier_point(control_points, i / last_point )
     for i in range(number_of_curve_points)
   ]
+  return [p for p in points if p != None]
 
 def bezier_point(control_points, t):
   while len(control_points) > 1:
     control_linestring = zip(control_points[:-1], control_points[1:])
     control_points = [(1 - t) * p1 + t * p2 for p1, p2 in control_linestring]
+  if not control_points:
+    return None
   return control_points[0]
   
 def plot_compl(compl_arr, df, **kwargs):
@@ -44,8 +47,8 @@ def find_tangents(p):
 def build_smooth_path(path):
   tangents = find_tangents(path)
   points = []
-  for i in range(int(len(tangents)/4)):
-    points += bezier_curve(tangents[i*4: (i*4)+4], 10)
+  for i in range(int(len(tangents)/3)):
+    points += bezier_curve(tangents[i*4: (i*4)+4], 20)
   return points
   
 def main():

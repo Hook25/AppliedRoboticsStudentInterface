@@ -136,7 +136,7 @@ def enlarge_obsts(obsts):
 
 def do_path_finding(rob, victs, obsts, gate):
   from prog_rob import data
-  from prog_rob.utils import draw_graph, draw_node, draw_path
+  from prog_rob.utils import center_of, draw_graph, draw_path
   from prog_rob import path_finder
   rob = cont_p_to_sensible(rob)
   obsts = [cont_p_to_sensible(obst) for obst in obsts]
@@ -164,9 +164,18 @@ def do_path_finding(rob, victs, obsts, gate):
         start = node
   path_finder.clean(graph)
   path_finder.init_dist(graph, target)
-  path = path_finder.find_path(start, target, path_finder.cf)
-  draw_path(path)
+  poly_path = path_finder.find_path(start, target, path_finder.cf)
+  poly_coords_path = [complex(*center_of((n.x, n.Mx), (n.y, n.My))) for n in poly_path]
   draw_graph(graph)
+  draw_path(poly_path)
+  return poly_coords_path
+
+def do_smooth_path(poly):
+  from curve_maker import build_smooth_path, plot_compl
+  import matplotlib.pyplot as plt 
+  smooth = build_smooth_path(poly)
+  plot_compl(smooth, plt.plot)
+  plt.show()
 
 def main():
   img = cv2.imread("in.jpg")
@@ -175,8 +184,9 @@ def main():
   cont, bari_p, top_p, angle = find_robot(img, (BLUE_LOW, BLUE_HIGH))
   victs, gate = find_victims_gate(img, (GREEN_LOW, GREEN_HIGH))
   obst = find_obstacles(img, (RED_LOW, RED_HIGH))
-  do_path_finding(cont, victs, obst, gate)
-  
+  poly = do_path_finding(cont, victs, obst, gate)
+  do_smooth_path(poly)
+  return
   cv2.drawContours(orig, [cont], 0, (0,0,0), 2)
   cv2.circle(orig, bari_p, 5,(0,0,255), -1)
   cv2.circle(orig, top_p, 5,(0,255,0), -1)
