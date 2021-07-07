@@ -3,6 +3,8 @@
 #include<set>
 #include<iostream>
 #include<cassert>
+#include<queue>
+#include<math.h>
 
 namespace path_planner {
   void sorted_nodup(std::vector<int> &v){
@@ -96,21 +98,89 @@ namespace path_planner {
     //give kind and id to each node
     for(int i = 0; i < out.size(); i++){
       categorize(in, out[i]);
-      if(out[i].kind == GenKind::start || ){
+      if(out[i].kind == GenKind::start ){
         starts.push_back(&out[i]);
-      }elif(out[i].kind == GenKind::target){
+      }else if(out[i].kind == GenKind::target){
         ends.push_back(&out[i]);
       }
     }
     connect(out, xs.size(), ys.size());
   }
 
-  void graph_from_poly(std::vector<struct area_t> &in, std::vector<struct node_t> &out){
+  void graph_from_poly(
+   std::vector<struct area_t> &in, 
+   std::vector<struct node_t> &out,
+   std::vector<struct node_t*> &starts,
+   std::vector<struct node_t*> &ends){
     std::vector<int> xs;
     std::vector<int> ys;
     get_grid(xs, ys, in);
 
-    grid_to_graph(xs, ys, in, out);
+    grid_to_graph(xs, ys, in, out, starts, ends);
+  }
+  int get_dst(const path_t &p){
+    return 0;
+  }
+  
+  int ccost(node_t *a, node_t *b){
+    int cax, cay, cbx, cby;
+    cax = (a->x + a->Mx) / 2;
+    cay = (a->y + a->My) / 2;
+    cbx = (b->x + b->Mx) / 2;
+    cby = (b->y + b->My) / 2;
+    return (int)sqrt(pow((cax - cbx), 2) + pow(cay - cby, 2));
+  }
+
+  void update_cost(path_t &p){
+    size_t len = p.nodes.size();
+    node_t *prec = p.nodes[len - 2];
+    node_t *now = p.nodes[len - 1];
+    p.cost += ccost(prec, now);
+    if(p.nodes.back()->kind == GenKind::victim){
+    }
+  }
+  
+  void path_append(path_t &p, node_t *n){
+    p.nodes.push_back(n);
+    update_cost(p);
+  }
+
+  void clean(std::vector<node_t> &graph){
+    for(int i = 0; i<graph.size(); i++){
+      graph[i].cost = 1e9;
+    }
+  }
+
+  void plan(std::vector<struct node_t> &graph, node_t *start, path_t &best){
+    clean(graph);
+    auto cmp = [](const path_t &left, const path_t &right) {
+      int dst_l = get_dst(left);
+      int dst_r = get_dst(right);
+      int cst_l = left.cost;
+      int cst_r = right.cost;
+      int cumul_l = dst_l + cst_l;
+      int cumul_r = dst_r + cst_r;
+      return cumul_l == cumul_r ? cst_l > cst_r : cumul_l > cumul_r;
+    };
+    std::priority_queue<path_t, std::vector<path_t>, decltype(cmp)> pq(cmp);
+    path_t start_p = {0,{}, std::vector<node_t*>({start})};
+    best.cost = 1e9;
+    pq.push(start_p);
+    while(!pq.empty()){
+      path_t current = pq.top();
+      pq.pop();
+      for(node_t *nei : current.nodes.back()->nei){
+        path_t new_path = current;//copy hopefully
+        path_append(new_path, nei);
+        if(nei->kind == GenKind::target){
+          best = new_path;
+        }else if(new_path.cost < nei->cost &&
+         new_path.cost < best.cost){
+          nei->cost = new_path.cost;
+          pq.push(new_path);
+        }
+      }
+    }
   }
 }
 
@@ -130,12 +200,15 @@ int main(void){
       a.push_back({GenKind::victim, x, y, x+1, y+1, -1});
     }
   }
-  /*a.push_back({GenKind::victim, 1, 1, 2, 2, 1});
+  /*a.push_back({GenKind::obstacle, 0, 0, 1, 1, 1});
+  a.push_back({GenKind::victim, 1, 1, 2, 2, 1});
   a.push_back({GenKind::target, 0, 1, 1, 2, -1});
   a.push_back({GenKind::start, 1, 0, 2, 1, -1});
   */
   vector<node_t> t;
-  path_planner::graph_from_poly(a, t);
+  vector<node_t*> starts;
+  vector<node_t*> ends;
+  path_planner::graph_from_poly(a, t, starts, ends);
   for(auto n : t){
     std::cout << n.x << " : " << n.y << " > " << std::endl;
     for(auto n1 : n.nei){
