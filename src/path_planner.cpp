@@ -196,24 +196,29 @@ example = [
 int main(void){
   vector<area_t> a;
   for(int x = 0; x < 20; x++){
-    for(int y = 0; y < 20; y++){
-      a.push_back({GenKind::victim, x, y, x+1, y+1, -1});
-    }
+      a.push_back({GenKind::victim, x, x, x+1, x+1, -1});
+    
   }
   /*a.push_back({GenKind::obstacle, 0, 0, 1, 1, 1});
   a.push_back({GenKind::victim, 1, 1, 2, 2, 1});
-  a.push_back({GenKind::target, 0, 1, 1, 2, -1});
-  a.push_back({GenKind::start, 1, 0, 2, 1, -1});
   */
+  a.push_back({GenKind::target, 0, 13, 1, 14, -1});
+  a.push_back({GenKind::start, 1, 0, 2, 1, -1});
   vector<node_t> t;
   vector<node_t*> starts;
   vector<node_t*> ends;
   path_planner::graph_from_poly(a, t, starts, ends);
-  for(auto n : t){
-    std::cout << n.x << " : " << n.y << " > " << std::endl;
+  /*for(auto n : t){
+    std::cout << (n.kind == GenKind::start ? "start" : "") << "  " << n.x << " : " << n.y << " > " << std::endl;
     for(auto n1 : n.nei){
       std::cout << " " << n1->x << " : " << n1->y << std::endl;
     }
+  }*/
+  path_t res;
+  plan(t, starts[0], res);
+  for(auto p : res.nodes){
+    cout << p->x << " : " << p->y << endl;
   }
+  cout << endl;
 }
 #endif
