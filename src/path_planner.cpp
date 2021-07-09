@@ -5,12 +5,27 @@
 #include<cassert>
 #include<queue>
 #include<math.h>
+#include<complex>
+
+#include <opencv2/core/types.hpp>
+/*
+namespace cv{
+  template<> cv::Point cv::Point::operator*(const cv::Point p1);
+  template<int T>
+  cv::Point cv::Point::operator*(const cv::Point p1){
+    return cv::Point(p1.x * this->x, p1.y * this->y);
+  }
+}*/
+
+#define EPSILON .0001
 
 namespace path_planner {
+
   void sorted_nodup(std::vector<int> &v){
     std::set<int> s(v.begin(), v.end());
-    v.assign( s.begin(), s.end() );
+    v.assign(s.begin(), s.end());
   }
+
   void get_grid(std::vector<int> &xs, std::vector<int> &ys, std::vector<struct area_t> &in){
     xs.push_back(0);
     ys.push_back(0);
@@ -26,10 +41,10 @@ namespace path_planner {
   }
 
   inline bool intersects(const area_t &a, const node_t &n){
-    //node inside (or eq) area 
+    //node_t inside (or eq) area 
     return n.x >= a.x && n.y >= a.y && n.x < a.Mx && n.y < a.My;
   }
-
+  //TODO: fix this shit, too slow 
   void categorize(const std::vector<struct area_t> areas, node_t &n){
     for(auto a : areas){
       if(intersects(a, n)) {
@@ -88,14 +103,14 @@ namespace path_planner {
   {
     auto x_bound = xs.end() - 1;
     auto y_bound = ys.end() - 1;
-    //create a node per coord couple
+    //create a node_t per coord couple
     for (auto x = xs.begin(); x != x_bound; x++){
       for(auto y = ys.begin(); y != y_bound; y++){
         node_t n = {*x,  *y, *(x+1), *(y+1)};
         out.push_back(n);
       }
     }
-    //give kind and id to each node
+    //give kind and id to each node_t
     for(int i = 0; i < out.size(); i++){
       categorize(in, out[i]);
       if(out[i].kind == GenKind::start ){
@@ -119,7 +134,7 @@ namespace path_planner {
     grid_to_graph(xs, ys, in, out, starts, ends);
   }
   int get_dst(const path_t &p){
-    return 0;
+    return p.nodes.back()->dst_target;
   }
   
   int ccost(node_t *a, node_t *b){
@@ -145,22 +160,25 @@ namespace path_planner {
     update_cost(p);
   }
 
-  void clean(std::vector<node_t> &graph){
+  void clean(std::vector<node_t> &graph, int tx, int ty){
     for(int i = 0; i<graph.size(); i++){
       graph[i].cost = 1e9;
+      graph[i].cx = (graph[i].x + graph[i].Mx)/2;
+      graph[i].cy = (graph[i].y + graph[i].My)/2;
+      graph[i].dst_target = (int)sqrt(pow(graph[i].cx - tx, 2) + pow(graph[i].cy - ty, 2));
     }
   }
 
-  void plan(std::vector<struct node_t> &graph, node_t *start, path_t &best){
-    clean(graph);
+  void plan(std::vector<struct node_t> &graph, node_t *start, path_t &best, int tx, int ty){
+    clean(graph, tx, ty);
     auto cmp = [](const path_t &left, const path_t &right) {
       int dst_l = get_dst(left);
       int dst_r = get_dst(right);
       int cst_l = left.cost;
       int cst_r = right.cost;
-      int cumul_l = dst_l + cst_l;
-      int cumul_r = dst_r + cst_r;
-      return cumul_l == cumul_r ? cst_l > cst_r : cumul_l > cumul_r;
+      int cumul_l = dst_l;// + cst_l;
+      int cumul_r = dst_r;// + cst_r;
+      return cumul_l == cumul_r ? cst_l < cst_r : cumul_l < cumul_r;
     };
     std::priority_queue<path_t, std::vector<path_t>, decltype(cmp)> pq(cmp);
     path_t start_p = {0,{}, std::vector<node_t*>({start})};
@@ -170,7 +188,7 @@ namespace path_planner {
       path_t current = pq.top();
       pq.pop();
       for(node_t *nei : current.nodes.back()->nei){
-        path_t new_path = current;//copy hopefully
+        path_t new_path = current;//copy hopefullyst
         path_append(new_path, nei);
         if(nei->kind == GenKind::target){
           best = new_path;
@@ -181,6 +199,105 @@ namespace path_planner {
         }
       }
     }
+  }
+  #define A 1
+  inline double d_p(const std::vector<std::complex<double>> &p, int i){
+    return pow(abs(p[i] - p[i-1]), A);
+  }
+
+  void calc_intermediates(const std::vector<std::complex<double>> &in, int lb, std::vector<std::complex<double>> &out){
+    std::complex<double> p[] = {
+      in[lb], in[lb + 1], in[lb + 2], in[lb + 3]
+    };
+    double d[] = {
+      d_p(in, lb + 1), d_p(in, lb + 2), d_p(in, lb + 3)
+    };
+    double d_sq[] = {
+      pow(d[0], 2), pow(d[1], 2), pow(d[2], 2)
+    };
+    std::complex<double> t1_top = (p[2] * d_sq[0] - p[0] * d_sq[1] + p[1] * (d_sq[0] * 2 + d[0] * 3 * d[1] + d_sq[1]));
+    double t1_bot = (d[0] * 3 * (d[0] + d[1]));
+
+    std::complex<double> t2_top = (p[1] * d_sq[2] - p[3] * d_sq[1] + p[2] * (d_sq[2] * 2 + d[2] * 3 * d[1] + d_sq[1]));
+    double t2_bot = (d[2] * 3 * (d[2] + d[1]));
+    std::complex<double> t1 = (
+       t1_top / t1_bot
+    );
+    std::complex<double> t2 = (
+       t2_top / t2_bot
+    );
+    out.push_back(p[1]);
+    out.push_back(t1);
+    out.push_back(t2);
+    out.push_back(p[2]);
+
+  }
+
+  void find_tangents(const std::vector<node_t*> &in, std::vector<std::complex<double>> &out){
+    std::vector<std::complex<double>> in_p;
+    for(auto n_s : in){
+      in_p.push_back(std::complex<double>(n_s->cx, n_s->cy));
+    }
+    //Disgusting hack but basically, necessary to have also the arrival and the start
+    auto first = in_p.begin();
+    in_p.insert(in_p.begin(), (*first + EPSILON * (*first - *(first+1))));
+    auto last = in_p.end() - 1;
+    in_p.push_back(*last + EPSILON * (*last - *(last - 1)));
+    for(int i = 0; i < in_p.size() - 4 + 1; i++){
+      calc_intermediates(in_p, i, out);
+    }
+  }
+
+  void bezier_point(const std::vector<std::complex<double>> &in, int in_index, double t, std::vector<std::complex<double>> &out){
+    std::vector<std::complex<double>> buffer(in.begin() + in_index, in.begin() + in_index + 4);
+    while(buffer.size() > 1){
+      std::vector<std::complex<double>> replacement;
+      auto lw = buffer.begin();
+      auto up = buffer.begin() + 1; 
+      while(up != buffer.end()){
+        replacement.push_back((*lw) * (1 - t) + (*up) * t);
+        lw ++;
+        up ++;
+      }
+      buffer = replacement;
+    }
+    if(buffer.size() == 1){
+      out.push_back(buffer[0]);
+    }
+  }
+
+  void bezier_curve(const std::vector<std::complex<double>> &in, int in_index, int blocks, std::vector<std::complex<double>> &output){
+    int point_c = blocks - 1;
+    for(int i = 0; i<blocks; i++){
+      bezier_point(in, in_index, (double)i/(double)point_c, output);
+    }
+  }
+
+  void build_smooth_path(const path_t &input, std::vector<std::complex<double>> &output){
+    std::vector<std::complex<double>> tangents;
+    find_tangents(input.nodes, tangents);
+    for(int i = 0; i < (tangents.size() / 4); i++){
+      bezier_curve(tangents, i * 4, 20, output);
+    }
+  }
+
+  void test_build_smooth_path(void){
+    std::vector<node_t> g;
+    g.push_back({0,0,0,0,0  ,0,0,GenKind::victim,{},0});
+    g.push_back({0,0,0,0,51 ,1,0,GenKind::victim,{},0});
+    g.push_back({0,0,0,0,200,4,0,GenKind::victim,{},0});
+    g.push_back({0,0,0,0,120,5,0,GenKind::victim,{},0});
+    path_t p;
+    p.nodes.push_back(&g[0]);
+    p.nodes.push_back(&g[1]);
+    p.nodes.push_back(&g[2]);
+    p.nodes.push_back(&g[3]);
+    std::vector<std::complex<double>> u;
+    build_smooth_path(p, u);
+    for(auto p : u){
+      std::cout << real(p) << ":" << imag(p) << std::endl;
+    }
+
   }
 }
 
@@ -194,6 +311,8 @@ example = [
 ]
 */
 int main(void){
+  test_build_smooth_path();
+  return 0;
   vector<area_t> a;
   for(int x = 0; x < 20; x++){
       a.push_back({GenKind::victim, x, x, x+1, x+1, -1});
@@ -202,23 +321,19 @@ int main(void){
   /*a.push_back({GenKind::obstacle, 0, 0, 1, 1, 1});
   a.push_back({GenKind::victim, 1, 1, 2, 2, 1});
   */
-  a.push_back({GenKind::target, 0, 13, 1, 14, -1});
+  a.push_back({GenKind::target, 0, 20, 1, 21, -1});
   a.push_back({GenKind::start, 1, 0, 2, 1, -1});
   vector<node_t> t;
   vector<node_t*> starts;
   vector<node_t*> ends;
   path_planner::graph_from_poly(a, t, starts, ends);
-  /*for(auto n : t){
-    std::cout << (n.kind == GenKind::start ? "start" : "") << "  " << n.x << " : " << n.y << " > " << std::endl;
-    for(auto n1 : n.nei){
-      std::cout << " " << n1->x << " : " << n1->y << std::endl;
-    }
-  }*/
   path_t res;
-  plan(t, starts[0], res);
-  for(auto p : res.nodes){
-    cout << p->x << " : " << p->y << endl;
+  plan(t, starts[0], res, 20, 1);
+  vector<std::complex<double>> out; 
+  build_smooth_path(res, out);
+  for(auto p : out){
+    cout << real(p) << " : " << imag(p) << endl;
   }
-  cout << endl;
+  return 0;
 }
 #endif

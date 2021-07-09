@@ -25,6 +25,9 @@ a = 1
 def d(p, i):
   return abs(p[i] - p[i-1]) ** a  
 
+def _abs(s):
+  return ((s.real**2) + (s.imag **2)) * .5
+
 def calc_intermediate(p):
   assert len(p) == 4, "Error"
   d1 = d(p, 1)
@@ -42,6 +45,7 @@ def find_tangents(p):
   res = []
   for i in range(int(len(p) - 4 + 1)):
     res += calc_intermediate(p[i:i+4])
+
   return res
   
 def build_smooth_path(path):
@@ -52,11 +56,10 @@ def build_smooth_path(path):
   return points
   
 def main():
-  arr = [(0,0), (50, 1.5), (200, 4.5), (230, 4.5)]
+  arr = [(0,0), (50, 1), (200, 4), (120, 5)]
   arr = [complex(x,y) for (x,y) in arr]
   points = build_smooth_path(arr)
   plot_compl(points, plt.plot, c='b')
-  plot_compl([complex(230, 4.5), complex(1000, 4.5)], plt.plot, c='b')
   #plot_compl(arr_to_draw, plt.scatter, c='g')
   plot_compl(arr, plt.scatter, c='r')
   plt.show()

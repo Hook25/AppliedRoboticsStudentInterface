@@ -19,10 +19,13 @@ namespace path_planner{
     int y;
     int Mx;
     int My;
+    int cx; 
+    int cy;
     int vic_id;
     GenKind kind;
     std::vector<struct node_t*> nei;
     int cost;
+    int dst_target;
   };
   struct path_t{
     int cost;

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(student_proect)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++11 -g -fmax-errors=1)
 
 find_package(OpenCV REQUIRED )
 find_package(project_interface REQUIRED )
@@ -22,6 +22,14 @@ target_link_libraries(calibrate
 add_executable(see
   src/map_watcher.cpp
 )
+add_executable(planner_sample
+  src/path_planner.cpp  
+)
+target_link_libraries(planner_sample
+  ${OpenCV_LIBRARIES}
+)
+target_compile_definitions(planner_sample PRIVATE EXAMPLE_USAGE=1)
+
 target_link_libraries(see
   ${OpenCV_LIBRARIES}  
   stdc++fs
@@ -31,6 +39,7 @@ target_compile_definitions(see PRIVATE EXAMPLE_USAGE=1)
 add_library(student SHARED
    src/student_interface.cpp
    src/map_watcher.cpp
+   src/path_planner.cpp
 )
 
 target_link_libraries(student
