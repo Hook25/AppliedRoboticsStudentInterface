@@ -16,7 +16,14 @@ Once a preliminary work of filtering is done, as usual by size, the contour with
 The victims are slightly more complicated to detect because this operation requires two steps. The first is carried out as above, filtering by size and approximating to a circle. The additional problem is that the victims all have a tag on them, identifying them with an integer number. To detect the exact value of this tag the victim is isolated and sent to a template matching procedure that compares the input against a set of templates.
 
 ## Planning
-TODO
+The planning algorithm is sub-divided into two parts: Graphing the plane and finding the best path through it.
+
+### Plane graphing
+Given a set of areas of interest, a graph is constructed linking together each visitable area. This graph is constructed with a subdivision function and a linking function that create a tiled space of explorable states. The algorithm in this implementation is not very scalable, but the concepts at hands are.
+
+### Path exploration
+The exploration of the graph is done through a priority queue, sorted according to a priority function. The objective is to get to the end of the path having the shortest travel time possible. Given that the travel time is influenced not only by the distance, but also from the victims collected, this methodology (+ node marking) allows to carry out both tasks contemporarely, with an efficient hysteresis function to avoid dept first research.
+
 ## Installation
 The project comes preconfigured with a `CMakeList.txt`, to have a sample of the computer vision there are three possible routes. 
 #### Python 3 script
