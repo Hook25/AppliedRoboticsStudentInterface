@@ -1,6 +1,7 @@
 #include "student_image_elab_interface.hpp"
 #include "student_planning_interface.hpp"
 
+#include "path_planner.hpp"
 #include "map_watcher.hpp"
 
 #include<ctime>
@@ -9,8 +10,10 @@
 #include<experimental/filesystem>
 #include<glob.h>
 
+#include<complex>
+
 #define DISPLAY_SCALE 2.0
-#define AL_EXT_CAL true
+#define AL_EXT_CAL false
 
 #ifndef DEBUG
 #define DEBUG 1
@@ -212,9 +215,71 @@ namespace student {
     theta = bot.angle;    
     return true;
   }
+  
+  void to_xyMxMy_scale(const Polygon &poly, double &x, double &y, double &Mx, double &My){
+    x = poly[0].x;
+    Mx = poly[0].x;
+    y = poly[0].y;
+    My = poly[0].y;
+    for(auto p : poly){
+      if(p.x < x){
+        x = p.x;
+      }
+      if(p.y < y){
+        y = p.y;
+      }
+      if(p.x > Mx){
+        Mx = p.x;
+      }
+      if(p.y > My){
+        My = p.y;
+      }
+    }
+  }
+  
+  void setup_target(float x, float y, float theta, path_planner::area_t &target, std::vector<path_planner::area_t> &b_rect){
+    b_rect.push_back({path_planner::GenKind::start, x, y, x + .001, y + .001, -1});
+  }
 
   bool planPath(const Polygon& borders, const std::vector<Polygon>& obstacle_list, const std::vector<std::pair<int,Polygon>>& victim_list, const Polygon& gate, const float x, const float y, const float theta, Path& path){
-    throw std::logic_error( "STUDENT FUNCTION - PLAN PATH - NOT IMPLEMENTED" );     
+    std::vector<path_planner::area_t> areas;
+    for(auto obst : obstacle_list){
+      double x, y, Mx, My;
+      to_xyMxMy_scale(obst, x, y, Mx, My);
+      areas.push_back({path_planner::GenKind::obstacle, x, y, Mx, My, -1});
+    }
+
+    for(auto vic : victim_list){
+      double x, y, Mx, My;
+      to_xyMxMy_scale(vic.second, x, y, Mx, My);
+      areas.push_back({path_planner::GenKind::victim, x, y, Mx, My, vic.first});
+    }
+
+    double v_x, v_y, v_Mx, v_My;
+    to_xyMxMy_scale(gate, v_x, v_y, v_Mx, v_My);
+    areas.push_back({path_planner::GenKind::target, v_x, v_y, v_Mx, v_My, -1});
+
+    path_planner::area_t target;
+    std::vector<path_planner::area_t> bounding_rect;
+    setup_target(x, y, theta, target, bounding_rect);
+    areas.push_back(target);
+
+    std::vector<path_planner::node_t*> starts;
+    std::vector<path_planner::node_t*> ends;
+    std::vector<path_planner::node_t> graph;
+    path_planner::graph_from_poly(areas, graph, starts, ends);
+
+    path_planner::path_t res;
+    path_planner::plan(graph, starts[0], res, (*ends.begin())->x, (*ends.begin())->y);
+
+    std::vector<std::complex<double>> out;
+    build_smooth_path(res, out);
+    
+    for(auto p : out){
+      path.points.push_back(Pose(0, real(p), imag(p), 0, 0)); //  << std::endl;
+    }
+    //areas.push_back(bounding_rect);
+    return true;
   }
 
 

@@ -21,12 +21,12 @@ namespace cv{
 
 namespace path_planner {
 
-  void sorted_nodup(std::vector<int> &v){
-    std::set<int> s(v.begin(), v.end());
+  void sorted_nodup(std::vector<double> &v){
+    std::set<double> s(v.begin(), v.end());
     v.assign(s.begin(), s.end());
   }
 
-  void get_grid(std::vector<int> &xs, std::vector<int> &ys, std::vector<struct area_t> &in){
+  void get_grid(std::vector<double> &xs, std::vector<double> &ys, std::vector<struct area_t> &in){
     xs.push_back(0);
     ys.push_back(0);
 
@@ -94,8 +94,8 @@ namespace path_planner {
     }
   }
   void grid_to_graph(
-    const std::vector<int> &xs,
-    const std::vector<int> &ys, 
+    const std::vector<double> &xs,
+    const std::vector<double> &ys, 
     const std::vector<struct area_t> &in,
     std::vector<struct node_t> &out, 
     std::vector<struct node_t*> &starts, 
@@ -127,8 +127,8 @@ namespace path_planner {
    std::vector<struct node_t> &out,
    std::vector<struct node_t*> &starts,
    std::vector<struct node_t*> &ends){
-    std::vector<int> xs;
-    std::vector<int> ys;
+    std::vector<double> xs;
+    std::vector<double> ys;
     get_grid(xs, ys, in);
 
     grid_to_graph(xs, ys, in, out, starts, ends);
@@ -137,13 +137,13 @@ namespace path_planner {
     return p.nodes.back()->dst_target;
   }
   
-  int ccost(node_t *a, node_t *b){
-    int cax, cay, cbx, cby;
+  double ccost(node_t *a, node_t *b){
+    double cax, cay, cbx, cby;
     cax = (a->x + a->Mx) / 2;
     cay = (a->y + a->My) / 2;
     cbx = (b->x + b->Mx) / 2;
     cby = (b->y + b->My) / 2;
-    return (int)sqrt(pow((cax - cbx), 2) + pow(cay - cby, 2));
+    return sqrt(pow((cax - cbx), 2) + pow(cay - cby, 2));
   }
 
   void update_cost(path_t &p){
@@ -160,24 +160,24 @@ namespace path_planner {
     update_cost(p);
   }
 
-  void clean(std::vector<node_t> &graph, int tx, int ty){
+  void clean(std::vector<node_t> &graph, double tx, double ty){
     for(int i = 0; i<graph.size(); i++){
       graph[i].cost = 1e9;
       graph[i].cx = (graph[i].x + graph[i].Mx)/2;
       graph[i].cy = (graph[i].y + graph[i].My)/2;
-      graph[i].dst_target = (int)sqrt(pow(graph[i].cx - tx, 2) + pow(graph[i].cy - ty, 2));
+      graph[i].dst_target = sqrt(pow(graph[i].cx - tx, 2) + pow(graph[i].cy - ty, 2));
     }
   }
 
-  void plan(std::vector<struct node_t> &graph, node_t *start, path_t &best, int tx, int ty){
+  void plan(std::vector<struct node_t> &graph, node_t *start, path_t &best, double tx, double ty){
     clean(graph, tx, ty);
     auto cmp = [](const path_t &left, const path_t &right) {
-      int dst_l = get_dst(left);
-      int dst_r = get_dst(right);
-      int cst_l = left.cost;
-      int cst_r = right.cost;
-      int cumul_l = dst_l;// + cst_l;
-      int cumul_r = dst_r;// + cst_r;
+      double dst_l = get_dst(left);
+      double dst_r = get_dst(right);
+      double cst_l = left.cost;
+      double cst_r = right.cost;
+      double cumul_l = dst_l;// + cst_l;
+      double cumul_r = dst_r;// + cst_r;
       return cumul_l == cumul_r ? cst_l < cst_r : cumul_l < cumul_r;
     };
     std::priority_queue<path_t, std::vector<path_t>, decltype(cmp)> pq(cmp);
@@ -314,8 +314,8 @@ int main(void){
   test_build_smooth_path();
   return 0;
   vector<area_t> a;
-  for(int x = 0; x < 20; x++){
-      a.push_back({GenKind::victim, x, x, x+1, x+1, -1});
+  for(double x = 0; x < 20; x++){
+      a.push_back({GenKind::victim, x, x, x + 1.0, x + 1.0, -1});
     
   }
   /*a.push_back({GenKind::obstacle, 0, 0, 1, 1, 1});
